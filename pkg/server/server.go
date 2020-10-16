@@ -115,10 +115,8 @@ TRACKS_LOOP:
 		}
 		
 		// Regexp match
-		if len(c.FilterKeywords) > 0 {
-			if !re.MatchString(track.Name) {
-				continue TRACKS_LOOP
-			}
+		if !re.MatchString(track.Name) {
+			continue TRACKS_LOOP
 		}
 
 		into.WriteString("#EXTINF:")                       // nolint: errcheck
