@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"regexp"
 
 	"github.com/jamesnetherton/m3u"
 	"github.com/pierre-emmanuelJ/iptv-proxy/pkg/config"
@@ -96,6 +97,8 @@ func (c *Config) playlistInitialization() error {
 // MarshallInto a *bufio.Writer a Playlist.
 func (c *Config) marshallInto(into *os.File, xtream bool) error {
 	into.WriteString("#EXTM3U\n") // nolint: errcheck
+	
+	var re = regexp.MustCompile(`HD|hd|1080`)
 
 TRACKS_LOOP:
 	for _, track := range c.playlist.Tracks {
@@ -108,6 +111,13 @@ TRACKS_LOOP:
 				if name == "group-title" && !c.FilterGroups[value] {
 					continue TRACKS_LOOP
 				}
+			}
+		}
+		
+		// Regexp match
+		if len(c.FilterKeywords) > 0 {
+			if !re.MatchString(track.Name) {
+				continue TRACKS_LOOP
 			}
 		}
 
