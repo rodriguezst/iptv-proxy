@@ -98,25 +98,32 @@ func (c *Config) playlistInitialization() error {
 func (c *Config) marshallInto(into *os.File, xtream bool) error {
 	into.WriteString("#EXTM3U\n") // nolint: errcheck
 	
-	var re = regexp.MustCompile(`HD|hd|1080`)
+	if c.GroupRegex != "" {
+		var re_group = regexp.MustCompile(c.GroupRegex)
+	}
+	if c.ChannelRegex != "" {
+		var re_channel = regexp.MustCompile(c.ChannelRegex)
+	}
 
 TRACKS_LOOP:
 	for _, track := range c.playlist.Tracks {
 
-		// Groups filtering
-		if len(c.FilterGroups) > 0 {
+		// Group regex
+		if c.ChannelRegex != "" {
 			for i := range track.Tags {
 				name := track.Tags[i].Name
 				value := track.Tags[i].Value
-				if name == "group-title" && !c.FilterGroups[value] {
+				if name == "group-title" && !re_group.MatchString(value) {
 					continue TRACKS_LOOP
 				}
 			}
 		}
 		
-		// Regexp match
-		if !re.MatchString(track.Name) {
-			continue TRACKS_LOOP
+		// Channel regex
+		if c.ChannelRegex != "" {
+			if !re_channel.MatchString(track.Name) {
+				continue TRACKS_LOOP
+			}
 		}
 
 		into.WriteString("#EXTINF:")                       // nolint: errcheck
