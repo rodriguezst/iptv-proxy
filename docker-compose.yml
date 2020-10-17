@@ -31,5 +31,5 @@ services:
       USER: test
       PASSWORD: testpassword
       # REGEX filters
-      GROUP_REGEX: 'TDT|DEPORTES|MOVISTAR'
+      GROUP_REGEX: 'SPORTS|NEWS'
       CHANNEL_REGEX: 'HD'
