@@ -68,11 +68,6 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		filters := map[string](bool){}
-		for _, groupName := range viper.GetStringSlice("filter-groups") {
-			filters[groupName] = true
-		}
-
 		conf := &config.ProxyConfig{
 			HostConfig: &config.HostConfiguration{
 				Hostname: viper.GetString("hostname"),
@@ -88,7 +83,8 @@ var rootCmd = &cobra.Command{
 			HTTPS:              viper.GetBool("https"),
 			M3UFileName:        viper.GetString("m3u-file-name"),
 			CustomEndpoint:     viper.GetString("custom-endpoint"),
-			FilterGroups:       filters,
+			GroupRegex:         viper.GetString("group-regex"),
+			ChannelRegex:       viper.GetString("channel-regex"),
 		}
 
 		server, err := server.NewServer(conf)
@@ -130,6 +126,8 @@ func init() {
 	rootCmd.Flags().String("xtream-password", "", "Xtream-code password login")
 	rootCmd.Flags().String("xtream-base-url", "", "Xtream-code base url e.g(http://expample.tv:8080)")
 	rootCmd.Flags().Int("m3u-cache-expiration", 1, "M3U cache expiration in hour")
+	rootCmd.Flags().String("group-regex", "", "Regex applied to groups for filtering")
+	rootCmd.Flags().String("channel-regex", "", "Regex applied to channel names for filtering")
 
 	if e := viper.BindPFlags(rootCmd.Flags()); e != nil {
 		log.Fatal("error binding PFlags to viper")
