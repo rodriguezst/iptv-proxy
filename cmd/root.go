@@ -139,6 +139,8 @@ func init() {
 	rootCmd.Flags().Int("m3u-cache-expiration", 1, "M3U cache expiration in hour")
 	rootCmd.Flags().String("group-regex", "", "Regex applied to groups for filtering")
 	rootCmd.Flags().String("channel-regex", "", "Regex applied to channel names for filtering")
+	rootCmd.Flags().BoolP("doh-enable", "", false, "Enable DNS over HTTPS")
+	rootCmd.Flags().BoolP("doh-fallback", "", false, "Use hostname as is if DOH fails")
 
 	if e := viper.BindPFlags(rootCmd.Flags()); e != nil {
 		log.Fatal("error binding PFlags to viper")
@@ -186,16 +188,16 @@ func triggerDOH(urlString string, fallback bool) string {
         ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
         defer cancel()
 
-        c := doh.Use(doh.CloudflareProvider, doh.GoogleProvider)
+        c := doh.Use(doh.Quad9Provider, doh.GoogleProvider)
 
         // do doh query
-        rsp, err := c.Query(ctx, dns.Domain(urlParsed.Host), dns.TypeA)
+        rsp, err := c.Query(ctx, dns.Domain(urlParsed.Hostname()), dns.TypeA)
         if err != nil {
                 if !fallback {
                         panic(err)
                 }
         } else {
-                returnValue = strings.ReplaceAll(urlString, urlParsed.Host, rsp.Answer[0].Data)
+                returnValue = strings.ReplaceAll(urlString, urlParsed.Hostname(), rsp.Answer[0].Data)
         }
 
         // close the client
