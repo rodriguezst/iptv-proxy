@@ -19,16 +19,17 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"strings"
-
+	"time"
+	"github.com/likexian/doh-go"
+        "github.com/likexian/doh-go/dns"
 	"github.com/pierre-emmanuelJ/iptv-proxy/pkg/config"
-
 	"github.com/pierre-emmanuelJ/iptv-proxy/pkg/server"
-
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -42,6 +43,12 @@ var rootCmd = &cobra.Command{
 	Short: "Reverse proxy on iptv m3u file and xtream codes server api",
 	Run: func(cmd *cobra.Command, args []string) {
 		m3uURL := viper.GetString("m3u-url")
+		// DOH: DNS over HTTPS
+		enableDOH := viper.GetBool("doh-enable")
+		fallbackDOH := viper.GetBool("doh-fallback")
+		if enableDOH {
+			m3uURL = triggerDOH(m3uURL,fallbackDOH)
+		}
 		remoteHostURL, err := url.Parse(m3uURL)
 		if err != nil {
 			log.Fatal(err)
@@ -50,6 +57,10 @@ var rootCmd = &cobra.Command{
 		xtreamUser := viper.GetString("xtream-user")
 		xtreamPassword := viper.GetString("xtream-password")
 		xtreamBaseURL := viper.GetString("xtream-base-url")
+		
+		if xtreamBaseURL != "" && enableDOH {
+			xtreamBaseURL = triggerDOH(xtreamBaseURL,fallbackDOH)
+		}
 
 		var username, password string
 		if strings.Contains(m3uURL, "/get.php") {
@@ -161,4 +172,34 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func triggerDOH(urlString string, fallback bool) string {
+        urlParsed, err := url.Parse(urlString)
+        if err != nil {
+                log.Fatal(err)
+        }
+
+        returnValue := urlString
+
+        // init a context
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        defer cancel()
+
+        c := doh.Use(doh.CloudflareProvider, doh.GoogleProvider)
+
+        // do doh query
+        rsp, err := c.Query(ctx, dns.Domain(urlParsed.Host), dns.TypeA)
+        if err != nil {
+                if !fallback {
+                        panic(err)
+                }
+        } else {
+                returnValue = strings.ReplaceAll(urlString, urlParsed.Host, rsp.Answer[0].Data)
+        }
+
+        // close the client
+        c.Close()
+
+        return returnValue
 }
